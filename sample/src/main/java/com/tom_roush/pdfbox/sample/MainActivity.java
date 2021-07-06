@@ -19,6 +19,8 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.pdfuiwrapper.link.Link;
+import com.example.pdfuiwrapper.link.LinkHandler;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.pdmodel.PDDocumentCatalog;
 import com.tom_roush.pdfbox.pdmodel.PDPage;
@@ -83,81 +85,17 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Creates a new PDF from scratch and saves it to a file
-     */
-    public void createPdf(View v) {
-        PDDocument document = new PDDocument();
-        PDPage page = new PDPage();
-        document.addPage(page);
-
-        // Create a new font object selecting one of the PDF base fonts
-        PDFont font = PDType1Font.HELVETICA;
-        // Or a custom font
-//        try
-//        {
-//            // Replace MyFontFile with the path to the asset font you'd like to use.
-//            // Or use LiberationSans "com/tom_roush/pdfbox/resources/ttf/LiberationSans-Regular.ttf"
-//            font = PDType0Font.load(document, assetManager.open("MyFontFile.TTF"));
-//        }
-//        catch (IOException e)
-//        {
-//            Log.e("PdfBox-Android-Sample", "Could not load font", e);
-//        }
-
-        PDPageContentStream contentStream;
-
-        try {
-            // Define a content stream for adding to the PDF
-            contentStream = new PDPageContentStream(document, page);
-
-            // Write Hello World in blue text
-            contentStream.beginText();
-            contentStream.setNonStrokingColor(15, 38, 192);
-            contentStream.setFont(font, 12);
-            contentStream.newLineAtOffset(100, 700);
-            contentStream.showText("Hello World");
-            contentStream.endText();
-
-            // Load in the images
-            InputStream in = assetManager.open("falcon.jpg");
-            InputStream alpha = assetManager.open("trans.png");
-
-            // Draw a green rectangle
-            contentStream.addRect(5, 500, 100, 100);
-            contentStream.setNonStrokingColor(0, 255, 125);
-            contentStream.fill();
-
-            // Draw the falcon base image
-            PDImageXObject ximage = JPEGFactory.createFromStream(document, in);
-            contentStream.drawImage(ximage, 20, 20);
-
-            // Draw the red overlay image
-            Bitmap alphaImage = BitmapFactory.decodeStream(alpha);
-            PDImageXObject alphaXimage = LosslessFactory.createFromImage(document, alphaImage);
-            contentStream.drawImage(alphaXimage, 20, 20 );
-
-            // Make sure that the content stream is closed:
-            contentStream.close();
-
-            // Save the final pdf document to a file
-            String path = root.getAbsolutePath() + "/Created.pdf";
-            document.save(path);
-            document.close();
-            tv.setText("Successfully wrote PDF to " + path);
-
-        } catch (IOException e) {
-            Log.e("PdfBox-Android-Sample", "Exception thrown while creating PDF", e);
-        }
-    }
-
-    /**
      * Loads an existing PDF and renders it to a Bitmap
      */
     public void renderFile(View v) {
         // Render the page and save it to an image file
         try {
             // Load in an already created PDF
-            PDDocument document = PDDocument.load(assetManager.open("Created.pdf"));
+            PDDocument document = PDDocument.load(assetManager.open("test-pdf.pdf"));
+            List<Link> links = LinkHandler.getLinks(document.getPage(0));
+            for (int i = 0; i < links.size(); i++) {
+                Log.w("LINK", links.get(i).toString());
+            }
             // Create a renderer for the document
             PDFRenderer renderer = new PDFRenderer(document);
             // Render the image to an RGB Bitmap

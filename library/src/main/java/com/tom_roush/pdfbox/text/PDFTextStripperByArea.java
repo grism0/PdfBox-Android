@@ -107,6 +107,11 @@ public class PDFTextStripperByArea extends PDFTextStripper
         return text.toString();
     }
 
+    public RectF getRecFForRegion( String regionName )
+    {
+        return regionArea.get( regionName );
+    }
+
     /**
      * Process the page to extract the region text.
      *
