@@ -1,4 +1,4 @@
-package com.example.pdfuiwrapper.link
+package dev.grismo.uiextensions.link
 
 import android.graphics.RectF
 import android.net.Uri

@@ -1,6 +1,5 @@
-package com.example.pdfuiwrapper.link
+package dev.grismo.uiextensions.link
 
-import android.graphics.Rect
 import android.graphics.RectF
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.interactive.action.PDAction
@@ -39,6 +38,11 @@ object LinkHandler {
             }
         }
         return result
+    }
+
+    @JvmStatic
+    fun List<Link>.getPossibleHit(x: Float, y: Float): Link?  = firstOrNull {
+        it.area.contains(x, y)
     }
 
     @JvmStatic

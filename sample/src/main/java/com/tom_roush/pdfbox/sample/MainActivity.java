@@ -3,7 +3,6 @@ package com.tom_roush.pdfbox.sample;
 import android.app.Activity;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -14,13 +13,10 @@ import android.widget.TextView;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.example.pdfuiwrapper.link.Link;
-import com.example.pdfuiwrapper.link.LinkHandler;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.pdmodel.PDDocumentCatalog;
 import com.tom_roush.pdfbox.pdmodel.PDPage;
@@ -29,9 +25,6 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission;
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
 import com.tom_roush.pdfbox.pdmodel.font.PDFont;
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
-import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory;
-import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory;
-import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox;
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDComboBox;
@@ -46,11 +39,16 @@ import com.tom_roush.pdfbox.util.PDFBoxResourceLoader;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import dev.grismo.uiextensions.link.Link;
+import dev.grismo.uiextensions.link.LinkHandler;
+import dev.grismo.uiextensions.link.LinkListener;
+import dev.grismo.uiextensions.ui.PDFView;
+
 public class MainActivity extends Activity {
     File root;
     AssetManager assetManager;
     Bitmap pageImage;
-    TextView tv;
+    PDFView view;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,183 +79,20 @@ public class MainActivity extends Activity {
 
         root = getApplicationContext().getCacheDir();
         assetManager = getAssets();
-        tv = (TextView) findViewById(R.id.statusTextView);
-    }
-
-    /**
-     * Loads an existing PDF and renders it to a Bitmap
-     */
-    public void renderFile(View v) {
-        // Render the page and save it to an image file
+        view = (PDFView) findViewById(R.id.pdfView);
         try {
-            // Load in an already created PDF
-            PDDocument document = PDDocument.load(assetManager.open("test-pdf.pdf"));
-            List<Link> links = LinkHandler.getLinks(document.getPage(0));
-            for (int i = 0; i < links.size(); i++) {
-                Log.w("LINK", links.get(i).toString());
-            }
-            // Create a renderer for the document
-            PDFRenderer renderer = new PDFRenderer(document);
-            // Render the image to an RGB Bitmap
-            pageImage = renderer.renderImage(0, 1, ImageType.RGB);
+            showPdf();
+        } catch (Exception e) {
 
-            // Save the render result to an image
-            String path = root.getAbsolutePath() + "/render.jpg";
-            File renderFile = new File(path);
-            FileOutputStream fileOut = new FileOutputStream(renderFile);
-            pageImage.compress(Bitmap.CompressFormat.JPEG, 100, fileOut);
-            fileOut.close();
-            tv.setText("Successfully rendered image to " + path);
-            // Optional: display the render result on screen
-            displayRenderedImage();
-        }
-        catch (IOException e)
-        {
-            Log.e("PdfBox-Android-Sample", "Exception thrown while rendering file", e);
         }
     }
 
-    /**
-     * Fills in a PDF form and saves the result
-     */
-    public void fillForm(View v) {
-        try {
-            // Load the document and get the AcroForm
-            PDDocument document = PDDocument.load(assetManager.open("FormTest.pdf"));
-            PDDocumentCatalog docCatalog = document.getDocumentCatalog();
-            PDAcroForm acroForm = docCatalog.getAcroForm();
-
-            // Fill the text field
-            PDTextField field = (PDTextField) acroForm.getField("TextField");
-            field.setValue("Filled Text Field");
-            // Optional: don't allow this field to be edited
-            field.setReadOnly(true);
-
-            PDField checkbox = acroForm.getField("Checkbox");
-            ((PDCheckBox) checkbox).check();
-
-            PDField radio = acroForm.getField("Radio");
-            ((PDRadioButton)radio).setValue("Second");
-
-            PDField listbox = acroForm.getField("ListBox");
-            List<Integer> listValues = new ArrayList<>();
-            listValues.add(1);
-            listValues.add(2);
-            ((PDListBox) listbox).setSelectedOptionsIndex(listValues);
-
-            PDField dropdown = acroForm.getField("Dropdown");
-            ((PDComboBox) dropdown).setValue("Hello");
-
-            String path = root.getAbsolutePath() + "/FilledForm.pdf";
-            tv.setText("Saved filled form to " + path);
-            document.save(path);
-            document.close();
-        } catch (IOException e) {
-            Log.e("PdfBox-Android-Sample", "Exception thrown while filling form fields", e);
-        }
+    private void showPdf() throws IOException {
+        PDDocument document = PDDocument.load(assetManager.open("test-pdf.pdf"));
+        view.showPage(document);
+        view.setLinkListener(link -> {
+            Log.e("LINK", link.toString());
+        });
     }
 
-    /**
-     * Strips the text from a PDF and displays the text on screen
-     */
-    public void stripText(View v) {
-        String parsedText = null;
-        PDDocument document = null;
-        try {
-            document = PDDocument.load(assetManager.open("Hello.pdf"));
-        } catch(IOException e) {
-            Log.e("PdfBox-Android-Sample", "Exception thrown while loading document to strip", e);
-        }
-
-        try {
-            PDFTextStripper pdfStripper = new PDFTextStripper();
-            pdfStripper.setStartPage(0);
-            pdfStripper.setEndPage(1);
-            parsedText = "Parsed text: " + pdfStripper.getText(document);
-        }
-        catch (IOException e)
-        {
-            Log.e("PdfBox-Android-Sample", "Exception thrown while stripping text", e);
-        } finally {
-            try {
-                if (document != null) document.close();
-            }
-            catch (IOException e)
-            {
-                Log.e("PdfBox-Android-Sample", "Exception thrown while closing document", e);
-            }
-        }
-        tv.setText(parsedText);
-    }
-
-    /**
-     * Creates a simple pdf and encrypts it
-     */
-    public void createEncryptedPdf(View v)
-    {
-        String path = root.getAbsolutePath() + "/crypt.pdf";
-
-        int keyLength = 128; // 128 bit is the highest currently supported
-
-        // Limit permissions of those without the password
-        AccessPermission ap = new AccessPermission();
-        ap.setCanPrint(false);
-
-        // Sets the owner password and user password
-        StandardProtectionPolicy spp = new StandardProtectionPolicy("12345", "hi", ap);
-
-        // Setups up the encryption parameters
-        spp.setEncryptionKeyLength(keyLength);
-        spp.setPermissions(ap);
-        BouncyCastleProvider provider = new BouncyCastleProvider();
-        Security.addProvider(provider);
-
-        PDFont font = PDType1Font.HELVETICA;
-        PDDocument document = new PDDocument();
-        PDPage page = new PDPage();
-
-        document.addPage(page);
-
-        try
-        {
-            PDPageContentStream contentStream = new PDPageContentStream(document, page);
-
-            // Write Hello World in blue text
-            contentStream.beginText();
-            contentStream.setNonStrokingColor(15, 38, 192);
-            contentStream.setFont(font, 12);
-            contentStream.newLineAtOffset(100, 700);
-            contentStream.showText("Hello World");
-            contentStream.endText();
-            contentStream.close();
-
-            // Save the final pdf document to a file
-            document.protect(spp); // Apply the protections to the PDF
-            document.save(path);
-            document.close();
-            tv.setText("Successfully wrote PDF to " + path);
-
-        }
-        catch (IOException e)
-        {
-            Log.e("PdfBox-Android-Sample", "Exception thrown while creating PDF for encryption", e);
-        }
-    }
-
-    /**
-     * Helper method for drawing the result of renderFile() on screen
-     */
-    private void displayRenderedImage() {
-        new Thread() {
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ImageView imageView = (ImageView) findViewById(R.id.renderedImageView);
-                        imageView.setImageBitmap(pageImage);
-                    }
-                });
-            }
-        }.start();
-    }
 }
